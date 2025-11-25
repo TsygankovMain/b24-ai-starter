@@ -6,6 +6,30 @@
 
 Проект УЖЕ содержит необходимую базовую структуру и настройки для frontend на базе Nuxt с интеграцией Bitrix24 UI Kit. При добавлении функционала нужно придерживаться этой структуры и использовать компоненты из `@bitrix24/b24ui-nuxt`.
 
+**Актуальная структура проекта:**
+```
+frontend/
+├── app/
+│   ├── app.config.ts          # Конфигурация B24UI
+│   ├── app.vue                # Корневой компонент
+│   ├── assets/css/main.css    # Главный CSS файл
+│   ├── components/            # Компоненты приложения
+│   │   ├── BackendStatus.vue
+│   │   └── Logo.vue
+│   ├── composables/           # Переиспользуемая логика
+│   ├── pages/                 # Страницы Nuxt
+│   │   ├── index.client.vue
+│   │   ├── install.client.vue
+│   │   ├── handler/
+│   │   └── slider/
+│   └── stores/                # Pinia stores
+├── nuxt.config.ts            # Конфигурация Nuxt
+├── package.json              # Зависимости
+└── i18n/                     # Интернационализация
+    ├── locales/
+    └── i18n.map.ts
+```
+
 **Ключевые особенности:**
 - Основан на Nuxt UI, но адаптирован под дизайн-систему Bitrix24
 - Использует Tailwind CSS 4 и Tailwind Variants для стилизации
@@ -549,7 +573,406 @@ confetti.fire()
 
 ---
 
-**Версия:** 2.0.2  
-**Последнее обновление:** Октябрь 2025  
+## 💾 Управление состоянием
+
+### 1. Pinia Store (рекомендуется для Vue/Nuxt)
+
+В проекте используется Pinia для управления состоянием. Создавайте stores в папке `composables/` или `stores/` используя Composition API:
+
+```typescript
+// composables/useDeals.ts
+export const useDealsStore = defineStore('deals', () => {
+  // Состояние
+  const deals = ref<Deal[]>([]);
+  const currentDeal = ref<Deal | null>(null);
+  const isLoading = ref(false);
+  const error = ref<string | null>(null);
+  
+  // Фильтры
+  const filters = ref<DealFilters>({
+    stage: null,
+    search: '',
+    dateFrom: null,
+    dateTo: null
+  });
+
+  // Геттеры
+  const filteredDeals = computed(() => {
+    let result = deals.value;
+    
+    if (filters.value.stage) {
+      result = result.filter(deal => deal.stageId === filters.value.stage);
+    }
+    
+    if (filters.value.search) {
+      const search = filters.value.search.toLowerCase();
+      result = result.filter(deal => 
+        deal.title.toLowerCase().includes(search)
+      );
+    }
+    
+    return result;
+  });
+
+  // Действия
+  async function fetchDeals() {
+    isLoading.value = true;
+    error.value = null;
+    
+    try {
+      const { data } = await $fetch<{data: Deal[]}>('/api/deals');
+      deals.value = data;
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to fetch deals';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  return {
+    // State
+    deals: readonly(deals),
+    currentDeal: readonly(currentDeal),
+    isLoading: readonly(isLoading),
+    error: readonly(error),
+    filters,
+    
+    // Getters
+    filteredDeals,
+    
+    // Actions
+    fetchDeals
+  };
+});
+```
+
+### 2. Composables для переиспользования логики
+
+```typescript
+// composables/useApi.ts
+export function useApi() {
+  const isLoading = ref(false);
+  const error = ref<string | null>(null);
+
+  async function apiCall<T>(
+    url: string, 
+    options?: RequestInit
+  ): Promise<T | null> {
+    isLoading.value = true;
+    error.value = null;
+    
+    try {
+      const response = await $fetch<T>(url, options);
+      return response;
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'API call failed';
+      return null;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  return {
+    isLoading: readonly(isLoading),
+    error: readonly(error),
+    apiCall
+  };
+}
+```
+
+---
+
+## 🎨 Стилизация с Tailwind CSS 4
+
+Проект использует **Tailwind CSS 4** через Vite плагин, что отличается от классической конфигурации:
+
+### Конфигурация
+
+**nuxt.config.ts:**
+```typescript
+import tailwindcss from '@tailwindcss/vite'
+
+export default defineNuxtConfig({
+  vite: {
+    plugins: [tailwindcss()]
+  }
+})
+```
+
+**assets/css/main.css:**
+```css
+@import "tailwindcss";
+@import "@bitrix24/b24ui-nuxt";
+
+@theme static {
+  /* Кастомные утилиты здесь */
+}
+```
+
+### Расширение тем Tailwind
+
+```css
+@theme {
+  --color-primary-50: theme(colors.blue.50);
+  --color-primary-500: theme(colors.blue.500);
+  --color-primary-900: theme(colors.blue.900);
+  
+  --font-family-brand: ui-serif, serif;
+  
+  --spacing-18: 4.5rem;
+}
+```
+
+---
+
+## 📱 Адаптивный дизайн
+
+### Breakpoints и сетки
+
+```vue
+<!-- Адаптивная сетка -->
+<template>
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    <!-- Карточки -->
+    <B24Card
+      v-for="item in items"
+      :key="item.id"
+      class="p-4"
+    >
+      {{ item.title }}
+    </B24Card>
+  </div>
+</template>
+```
+
+### Мобильная навигация с B24UI
+
+```vue
+<!-- components/MobileNavigation.vue -->
+<template>
+  <div class="lg:hidden">
+    <!-- Мобильное меню -->
+    <B24Button
+      variant="ghost"
+      @click="isOpen = !isOpen"
+    >
+      <B24Icon name="bars-3" />
+    </B24Button>
+
+    <!-- Выдвижная панель -->
+    <B24Slideover v-model="isOpen" side="left">
+      <B24Card class="p-4">
+        <nav class="space-y-2">
+          <NuxtLink
+            v-for="item in navigation"
+            :key="item.to"
+            :to="item.to"
+            class="block px-4 py-2 rounded-lg hover:bg-gray-100"
+            @click="isOpen = false"
+          >
+            {{ item.label }}
+          </NuxtLink>
+        </nav>
+      </B24Card>
+    </B24Slideover>
+  </div>
+</template>
+```
+
+---
+
+## ⚡ Производительность
+
+### 1. Ленивая загрузка компонентов
+
+```vue
+<script setup>
+// Ленивая загрузка тяжелых компонентов
+const LazyChart = defineAsyncComponent(() => import('~/components/Chart.vue'));
+const LazyDataTable = defineAsyncComponent(() => import('~/components/DataTable.vue'));
+
+const showChart = ref(false);
+</script>
+
+<template>
+  <div>
+    <!-- Основной контент загружается сразу -->
+    <B24Card class="mb-4">
+      <B24Button @click="showChart = true" v-if="!showChart">
+        Показать график
+      </B24Button>
+    </B24Card>
+    
+    <!-- Тяжелые компоненты загружаются по требованию -->
+    <LazyChart v-if="showChart" :data="chartData" />
+  </div>
+</template>
+```
+
+### 2. Паттерны списков с B24UI
+
+```vue
+<!-- components/DealList.vue -->
+<template>
+  <B24Container class="py-8">
+    <!-- Заголовок и действия -->
+    <div class="mb-6 flex items-center justify-between">
+      <h1 class="text-2xl font-bold">Сделки</h1>
+      <B24Button @click="openCreateModal">
+        Создать сделку
+      </B24Button>
+    </div>
+
+    <!-- Фильтры -->
+    <B24Card class="mb-6 p-4">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <B24Select
+          v-model="filters.stage"
+          :options="stageOptions"
+          placeholder="Выберите стадию"
+        />
+        <B24Input
+          v-model="filters.search"
+          placeholder="Поиск по названию"
+        >
+          <template #leading>
+            <B24Icon name="magnifying-glass" />
+          </template>
+        </B24Input>
+        <B24Button
+          variant="outline"
+          @click="clearFilters"
+        >
+          Очистить фильтры
+        </B24Button>
+      </div>
+    </B24Card>
+
+    <!-- Таблица -->
+    <B24Card>
+      <B24Table
+        :columns="columns"
+        :rows="filteredDeals"
+        :loading="isLoading"
+      >
+        <template #actions="{ row }">
+          <div class="flex gap-2">
+            <B24Button size="sm" @click="editDeal(row.id)">
+              Редактировать
+            </B24Button>
+            <B24Button
+              size="sm"
+              color="red"
+              variant="outline"
+              @click="deleteDeal(row.id)"
+            >
+              Удалить
+            </B24Button>
+          </div>
+        </template>
+      </B24Table>
+    </B24Card>
+  </B24Container>
+</template>
+```
+
+---
+
+## 🔧 Утилиты и помощники
+
+### Форматтеры данных
+
+```typescript
+// utils/formatters.ts
+export const formatters = {
+  // Форматирование валюты
+  currency(amount: number, currency: string = 'RUB'): string {
+    return new Intl.NumberFormat('ru-RU', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    }).format(amount);
+  },
+
+  // Форматирование даты
+  date(date: string | Date, format: 'short' | 'long' = 'short'): string {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    
+    if (format === 'short') {
+      return d.toLocaleDateString('ru-RU');
+    }
+    
+    return d.toLocaleDateString('ru-RU', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  },
+
+  // Относительное время  
+  timeAgo(date: string | Date): string {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    const now = new Date();
+    const diff = now.getTime() - d.getTime();
+    
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    
+    if (minutes < 1) return 'только что';
+    if (minutes < 60) return `${minutes} мин. назад`;
+    if (hours < 24) return `${hours} ч. назад`;
+    if (days < 7) return `${days} дн. назад`;
+    
+    return d.toLocaleDateString('ru-RU');
+  },
+
+  // Сокращение текста
+  truncate(text: string, length: number = 100): string {
+    if (text.length <= length) return text;
+    return text.slice(0, length) + '...';
+  }
+};
+```
+
+---
+
+## 🎯 Best practices
+
+### 1. Компонентная архитектура
+
+- **Используйте B24 компоненты** вместо нативных HTML элементов
+- **Разделяйте** презентационные и контейнерные компоненты  
+- **Создавайте** переиспользуемые композиции из B24UI компонентов
+- **Документируйте** API компонентов через props и emits
+
+### 2. Управление состоянием
+
+- **Локальное состояние** для UI логики компонента
+- **Pinia Store** для глобального состояния приложения
+- **Composables** для переиспользуемой логики
+- **Избегайте** prop drilling, используйте provide/inject
+
+### 3. Производительность
+
+- **Ленивая загрузка** компонентов и маршрутов
+- **Виртуализация** для больших списков (через B24Table)
+- **Мемоизация** вычислений через computed
+- **Дебаунс** для пользовательского ввода
+
+### 4. Доступность
+
+- **B24UI** уже включает ARIA атрибуты
+- **Семантические** компоненты (B24Card, B24Table)
+- **Клавиатурная** навигация работает из коробки
+- **Контрастность** цветов соответствует дизайн-системе
+
+---
+
+**Версия:** 2.1.0  
+**Последнее обновление:** Ноябрь 2025  
 **Лицензия:** MIT
 
