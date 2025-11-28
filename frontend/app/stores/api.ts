@@ -77,6 +77,14 @@ export const useApiStore = defineStore(
       })
     }
 
+    const getProjects = async (): Promise<{ items: { id: string, name: string }[] }> => {
+      return await $api('/api/projects', {
+        headers: {
+          Authorization: `Bearer ${tokenJWT.value}`
+        }
+      })
+    }
+
     const getDebugSchema = async (): Promise<any> => {
       return await $api('/api/debug/schema', {
         headers: {
@@ -131,6 +139,7 @@ export const useApiStore = defineStore(
       getList,
       postInstall,
       getUsers,
+      getProjects,
       getDebugSchema
     }
   }

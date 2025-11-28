@@ -59,10 +59,34 @@ class DictionaryController extends AbstractController
             }, $usersList);
 
             return new JsonResponse(['items' => $users]);
+        } catch (\Throwable $e) {
+            return new JsonResponse(['error' => $e->getMessage()], 500);
+        }
+    }
 
-        } catch (\Exception $e) {
-            $this->logger->error('Failed to fetch users: ' . $e->getMessage());
-            return new JsonResponse(['error' => 'Failed to fetch users'], 500);
+    #[Route('/api/projects', name: 'api_projects', methods: ['GET'])]
+    public function getProjects(BitrixClient $bitrixClient): JsonResponse
+    {
+        try {
+            // Fetch active projects (workgroups)
+            // sonet_group.get
+            $response = $bitrixClient->fetchAll('sonet_group.get', [
+                'FILTER' => ['ACTIVE' => 'Y', 'CLOSED' => 'N'],
+                'ORDER' => ['NAME' => 'ASC']
+            ]);
+            
+            $projectsList = $response;
+
+            $projects = array_map(function($group) {
+                return [
+                    'id' => $group['ID'],
+                    'name' => $group['NAME'],
+                ];
+            }, $projectsList);
+
+            return new JsonResponse(['items' => $projects]);
+        } catch (\Throwable $e) {
+            return new JsonResponse(['error' => $e->getMessage()], 500);
         }
     }
 

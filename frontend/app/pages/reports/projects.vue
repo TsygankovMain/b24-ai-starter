@@ -27,7 +27,12 @@
       <div class="bg-white rounded-xl shadow-sm p-4 mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Проект</label>
-          <input v-model="filters.projectName" type="text" placeholder="Название проекта" class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 shadow-sm" />
+          <select v-model="filters.projectName" class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500 shadow-sm">
+            <option value="">Все проекты</option>
+            <option v-for="project in projects" :key="project.id" :value="project.name">
+              {{ project.name }}
+            </option>
+          </select>
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Сотрудник</label>
@@ -190,6 +195,7 @@ const apiStore = useApiStore()
 const { items, isLoading, error } = storeToRefs(store)
 
 const users = ref<{ id: string, name: string }[]>([])
+const projects = ref<{ id: string, name: string }[]>([])
 const filters = ref({
   employeeId: '',
   projectName: '',
@@ -202,9 +208,14 @@ onMounted(async () => {
     const $b24 = await $initializeB24Frame()
     await initApp($b24, localesI18n, setLocale)
     
-    // Load users for filter
-    const usersData = await apiStore.getUsers()
+    // Load users and projects for filter
+    const [usersData, projectsData] = await Promise.all([
+      apiStore.getUsers(),
+      apiStore.getProjects()
+    ])
     users.value = usersData.items
+    projects.value = projectsData.items
+    
   } catch (e) {
     console.error('Failed to initialize Bitrix24 frame or load data:', e)
     processErrorGlobal(e)
@@ -235,12 +246,22 @@ const groupedData = computed(() => {
     userMap.set(String(user.id), user.name)
   })
 
+  // Create project map
+  const projectMap = new Map<string, string>()
+  projects.value.forEach(p => {
+    projectMap.set(String(p.id), p.name)
+    // Also map by name just in case
+    projectMap.set(p.name, p.name)
+  })
+
   const projectsMap = new Map<string, any>()
 
   items.value.forEach(item => {
     // Use projectId for grouping if available, otherwise use projectName
     const projKey = item.projectId || item.projectName || 'Не определён'
-    const projName = item.projectName || 'Не определён'
+    // Try to find project name in map by ID, then by name, then fallback to item.projectName
+    const mappedProjName = item.projectId ? projectMap.get(String(item.projectId)) : null
+    const projName = mappedProjName || item.projectName || 'Не определён'
     
     if (!projectsMap.has(projKey)) {
       projectsMap.set(projKey, { 
