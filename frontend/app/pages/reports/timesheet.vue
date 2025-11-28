@@ -106,7 +106,8 @@
             <div v-for="entry in selectedCell.entries" :key="entry.id" class="border-b pb-2 last:border-0">
               <div class="flex justify-between items-start">
                 <div>
-                  <p class="font-medium text-gray-900">{{ entry.taskName }}</p>
+                  <p class="font-medium text-gray-900">{{ entry.entryTitle || 'Метка #' + entry.id }}</p>
+                  <p class="text-xs text-gray-600">{{ entry.taskTitle || entry.taskName }}</p>
                   <p class="text-xs text-gray-500">{{ entry.projectName }}</p>
                 </div>
                 <div class="text-right">
@@ -137,12 +138,19 @@ useHead({
 })
 
 const store = useReportsStore()
+const apiStore = useApiStore()
 const { items, isLoading, error } = storeToRefs(store)
+
+const users = ref<{ id: string, name: string }[]>([])
 
 onMounted(async () => {
   try {
     const $b24 = await $initializeB24Frame()
     await initApp($b24, localesI18n, setLocale)
+    
+    // Load users for mapping
+    const usersData = await apiStore.getUsers()
+    users.value = usersData.items
   } catch (e) {
     console.error('Failed to initialize Bitrix24 frame:', e)
     processErrorGlobal(e)
@@ -221,11 +229,18 @@ interface EmployeeData {
 const timesheetData = computed(() => {
   if (!items.value.length) return []
 
+  // Create employee name mapping from users
+  const userMap = new Map<string, string>()
+  users.value.forEach(user => {
+    userMap.set(String(user.id), user.name)
+  })
+
   const employeesMap = new Map<string, EmployeeData>()
 
   items.value.forEach(item => {
-    const empId = item.employeeId || 'unknown'
-    const empName = item.employeeId ? `User ${item.employeeId}` : 'Неизвестный'
+    const empId = item.employeeId ? String(item.employeeId) : 'unknown'
+    // Use employeeName from backend if available, otherwise use mapped name, finally fallback to ID
+    const empName = item.employeeName || userMap.get(empId) || `User ${empId}`
     
     if (!employeesMap.has(empId)) {
       employeesMap.set(empId, {
