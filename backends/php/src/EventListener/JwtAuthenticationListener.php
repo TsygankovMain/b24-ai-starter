@@ -31,6 +31,8 @@ class JwtAuthenticationListener
         '/api/app-events',
         // server side events from bitrix24
         '/api/custom-b24-events',
+        // reports endpoints
+        '/api/reports',
     ];
 
     public function __construct(
