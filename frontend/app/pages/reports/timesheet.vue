@@ -92,31 +92,39 @@
 
       <!-- Details Modal -->
       <!-- Details Modal -->
-      <div v-if="selectedCell" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="selectedCell = null">
-        <div class="bg-white rounded-xl shadow-xl p-4 mx-4 max-w-lg w-full max-h-[80vh] overflow-y-auto">
-          <div class="flex justify-between items-center mb-4">
+      <!-- Details Modal -->
+      <div v-if="selectedCell" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+        <!-- Overlay -->
+        <div class="absolute inset-0 bg-black bg-opacity-50 transition-opacity" @click="selectedCell = null"></div>
+        
+        <!-- Content -->
+        <div class="bg-white w-full sm:max-w-lg max-h-[85vh] overflow-y-auto rounded-t-xl sm:rounded-xl p-4 relative z-10 shadow-xl transform transition-transform">
+          <div class="flex justify-between items-center mb-4 sticky top-0 bg-white pb-2 border-b border-gray-100">
             <h3 class="text-base font-bold text-gray-900">
               {{ selectedCell.employeeName }}<br>
               <span class="text-sm font-normal text-gray-500">{{ new Date(selectedCell.date).toLocaleDateString() }}</span>
             </h3>
-            <button @click="selectedCell = null" class="text-gray-500 hover:text-gray-700 bg-gray-100 p-1 rounded-full">
+            <button @click="selectedCell = null" class="text-gray-500 hover:text-gray-700 bg-gray-100 p-2 rounded-full">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
           
-          <div class="space-y-4">
-            <div v-for="entry in selectedCell.entries" :key="entry.id" class="border-b pb-2 last:border-0">
-              <div class="flex justify-between items-start">
-                <div>
-                  <p class="font-medium text-gray-900">{{ entry.entryTitle || 'Метка #' + entry.id }}</p>
-                  <p class="text-xs text-gray-600">{{ entry.taskTitle || entry.taskName }}</p>
-                  <p class="text-xs text-gray-500">{{ entry.projectName }}</p>
+          <div class="space-y-3">
+            <div v-for="entry in selectedCell.entries" :key="entry.id" class="bg-gray-50 rounded-lg p-3">
+              <div class="flex justify-between items-start gap-3">
+                <div class="min-w-0 flex-1">
+                  <p class="font-medium text-gray-900 truncate">{{ entry.entryTitle || 'Метка #' + entry.id }}</p>
+                  <p class="text-xs text-gray-600 line-clamp-2">{{ entry.taskTitle || entry.taskName }}</p>
+                  <p class="text-xs text-gray-400 mt-1 truncate">{{ entry.projectName }}</p>
                 </div>
-                <div class="text-right">
-                  <span class="font-bold text-blue-600">{{ entry.hours }} ч.</span>
-                  <p class="text-xs text-gray-400">{{ entry.type }}</p>
+                <div class="text-right flex-shrink-0">
+                  <span class="block font-bold text-blue-600">{{ Number(entry.hours).toFixed(2) }} ч.</span>
+                  <span class="inline-block px-2 py-0.5 rounded text-[10px] mt-1" 
+                        :class="entry.type === 'Учитываемые' ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-700'">
+                    {{ entry.type }}
+                  </span>
                 </div>
               </div>
             </div>
