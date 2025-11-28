@@ -13,19 +13,26 @@ export const useReportsStore = defineStore('reports', () => {
     const currentFilter = ref<ReportFilter>({})
 
     const fetchReports = async (filter: ReportFilter) => {
+        console.log('ReportsStore: fetchReports called with filter:', filter)
         isLoading.value = true
         error.value = null
         currentFilter.value = filter
 
         try {
-            const { data } = await fetchReportData(filter)
-            if (data.value) {
-                items.value = data.value.items
+            console.log('ReportsStore: calling fetchReportData...')
+            const data = await fetchReportData(filter)
+            console.log('ReportsStore: fetchReportData returned data:', data)
+
+            if (data) {
+                items.value = data.items
+                console.log('ReportsStore: items set, count:', items.value.length)
             }
         } catch (e: any) {
+            console.error('ReportsStore: Error in fetchReports:', e)
             error.value = e.message || 'Failed to fetch reports'
         } finally {
             isLoading.value = false
+            console.log('ReportsStore: fetchReports finished, isLoading=false')
         }
     }
 

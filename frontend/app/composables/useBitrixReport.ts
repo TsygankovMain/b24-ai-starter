@@ -36,6 +36,11 @@ export const useBitrixReport = () => {
         }
 
         try {
+            const url = `${baseUrl}/api/reports/data`
+            console.log('fetchReportData: Sending request to', url)
+            console.log('fetchReportData: filter params =', filter)
+            console.log('fetchReportData: baseURL =', baseUrl)
+
             const response = await $fetch<{ items: ReportItem[], count: number }>('/api/reports/data', {
                 baseURL: baseUrl,
                 method: 'GET',
@@ -45,9 +50,17 @@ export const useBitrixReport = () => {
                 }
             })
 
-            return { data: response, pending: false }
-        } catch (error) {
+            console.log('fetchReportData: Response received, items count =', response.count)
+            return response
+        } catch (error: any) {
             console.error('Error fetching report data:', error)
+            console.error('Error details:', {
+                message: error.message,
+                statusCode: error.statusCode,
+                statusMessage: error.statusMessage,
+                data: error.data,
+                cause: error.cause
+            })
             throw error
         }
     }
