@@ -47,15 +47,15 @@ class ReportController extends AbstractController
 
             $filter = [];
 
-            // Date Range
+            // Date Range - using reflection date field
             $dateFrom = $request->query->get('dateFrom');
             $dateTo = $request->query->get('dateTo');
 
             if ($dateFrom) {
-                $filter['>=createdTime'] = $dateFrom;
+                $filter['>=ufCrm87_1764446274'] = $dateFrom;
             }
             if ($dateTo) {
-                $filter['<=createdTime'] = $dateTo;
+                $filter['<=ufCrm87_1764446274'] = $dateTo;
             }
 
             // Employee
