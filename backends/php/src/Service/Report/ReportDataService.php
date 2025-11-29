@@ -53,6 +53,7 @@ class ReportDataService
         $fieldHours = 'ufCrm87_1761919617';
         $fieldEmployee = 'ufCrm87_1761919601'; // Сотрудник с ФИО
         $fieldSotrudnik = 'assignedById'; // Standard field (fallback)
+        $fieldReflectionDate = 'ufCrm87_1764446274'; // Дата отражения
 
         // Helper to get value case-insensitively if needed, but usually it's camelCase
         $getValue = fn($key) => $item[$key] ?? $item[strtoupper($key)] ?? null;
@@ -95,8 +96,12 @@ class ReportDataService
             $projectName = $titleIerarhiya[0] ?? 'Не определён';
         }
 
-        // 4. Date
-        $createdTime = $item['createdTime'] ?? null;
+        // 4. Reflection Date
+        $reflectionDate = $getValue($fieldReflectionDate);
+        if (empty($reflectionDate)) {
+            // Fallback to createdTime if reflection date is not set
+            $reflectionDate = $item['createdTime'] ?? null;
+        }
 
         // 5. Type of Hours
         $uchityvat = $getValue($fieldUchityvat);
@@ -148,7 +153,7 @@ class ReportDataService
             'hierarchyTitles' => $titleIerarhiya,
             'hours' => (float)$getValue($fieldHours),
             'type' => $type,
-            'date' => $createdTime,
+            'date' => $reflectionDate,
             'employeeId' => $employeeId,
             'employeeName' => $employeeName,
             // 'raw' => $item // debug
