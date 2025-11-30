@@ -40,7 +40,7 @@ RUN <<EOF
   rm -rf /var/lib/apt/lists/*
 EOF
 
-RUN install-php-extensions amqp bcmath excimer intl pcntl opcache yaml zip pdo_pgsql pgsql sockets
+RUN install-php-extensions amqp bcmath excimer intl pcntl opcache yaml zip pdo_pgsql pgsql sockets gd
 
 WORKDIR /var/www
 

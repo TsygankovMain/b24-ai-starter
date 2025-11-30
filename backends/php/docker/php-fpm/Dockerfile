@@ -8,13 +8,18 @@ RUN apt-get update && apt-get install -y \
     libicu-dev \
     libpq-dev \
     postgresql-client \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install \
       zip \
       intl \
       bcmath \
       sockets \
       pdo_pgsql \
-      pgsql
+      pgsql \
+      gd
 
 ENV COMPOSER_ALLOW_SUPERUSER 1
 

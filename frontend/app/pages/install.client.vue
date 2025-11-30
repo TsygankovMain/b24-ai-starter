@@ -17,7 +17,7 @@ useHead({
 const config = useRuntimeConfig()
 const appUrl = withoutTrailingSlash(config.public.appUrl)
 
-const { $logger, initLang, processErrorGlobal } = useAppInit('Install')
+const { $logger, initLang, processErrorGlobal } = useAppInit('Install' as any)
 const { $initializeB24Frame } = useNuxtApp()
 const $b24: B24Frame = await $initializeB24Frame()
 await initLang($b24, localesI18n, setLocale)
@@ -85,48 +85,50 @@ const steps = ref<Record<string, IStep>>({
   placement: {
     caption: t('page.install.step.placement.caption'),
     action: async () => {
-      const key = {
-        placement: 'CRM_DEAL_DETAIL_TAB',
-        handler: `${appUrl}/handler/placement-crm-deal-detail-tab`
-      }
-      const exists = (steps.value.init?.data?.placementList as { placement: string, handler: string }[]).some(item => item.placement === key.placement && item.handler === key.handler )
-      if (exists) {
-        await $b24.callBatch([
-          {
-            method: 'placement.unbind',
-            params: {
-              PLACEMENT: key.placement
-            }
-          },
-          {
-            method: 'placement.bind',
-            params: {
-              PLACEMENT: key.placement,
-              HANDLER: key.handler,
-              TITLE: '[demo] Some Tab',
-              OPTIONS: {
-                errorHandlerUrl: `${appUrl}/handler/background-some-problem`
-              }
-            }
-          }
-        ])
-
-        return
+      console.log('App URL:', appUrl)
+      
+      // 1. Register TASK_VIEW_TAB
+      const taskPlacement = {
+        PLACEMENT: 'TASK_VIEW_TAB',
+        HANDLER: `${appUrl}/handler/task-time-tracking`,
+        TITLE: 'Учет часов',
+        DESCRIPTION: 'Учет времени по задаче'
       }
 
-      await $b24.callBatch([
-        {
-          method: 'placement.bind',
-          params: {
-            PLACEMENT: key.placement,
-            HANDLER: key.handler,
-            TITLE: '[demo] Some Tab',
-            OPTIONS: {
-              errorHandlerUrl: `${appUrl}/handler/background-some-problem`
-            }
-          }
-        }
-      ])
+      try {
+        // Try unbind first
+        await $b24.callMethod('placement.unbind', {
+            PLACEMENT: taskPlacement.PLACEMENT,
+            HANDLER: taskPlacement.HANDLER
+        }).catch(() => {}) // Ignore unbind error
+
+        // Bind
+        const res = await $b24.callMethod('placement.bind', taskPlacement)
+        console.log('Task placement bound:', res.getData())
+      } catch (e: any) {
+        console.error('Failed to bind task placement:', e)
+        $logger.error('Failed to bind task placement', e)
+        // Don't throw, try next placement
+      }
+
+      // 2. Register CRM_DEAL_DETAIL_TAB
+      const crmPlacement = {
+        PLACEMENT: 'CRM_DEAL_DETAIL_TAB',
+        HANDLER: `${appUrl}/handler/placement-crm-deal-detail-tab`,
+        TITLE: '[demo] Some Tab',
+        DESCRIPTION: 'Demo tab description'
+      }
+
+      try {
+        await $b24.callMethod('placement.unbind', {
+            PLACEMENT: crmPlacement.PLACEMENT,
+            HANDLER: crmPlacement.HANDLER
+        }).catch(() => {})
+
+        await $b24.callMethod('placement.bind', crmPlacement)
+      } catch (e: any) {
+        console.error('Failed to bind CRM placement:', e)
+      }
     }
   },
   userFields: {
@@ -328,6 +330,16 @@ onMounted(async () => {
       <ProseP small accent="less">
         {{ steps[stepCode]?.caption || '...' }}
       </ProseP>
+    </div>
+
+    <div class="mt-2 text-xs text-gray-400">
+        App URL: {{ appUrl }}
+    </div>
+
+    <div class="mt-4">
+        <button @click="isShowDebug = !isShowDebug" class="text-xs text-gray-400 underline">
+            {{ isShowDebug ? 'Скрыть отладку' : 'Показать отладку' }}
+        </button>
     </div>
 
     <ProsePre v-if="isShowDebug">
