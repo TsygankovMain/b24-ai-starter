@@ -87,27 +87,43 @@ const steps = ref<Record<string, IStep>>({
     action: async () => {
       console.log('App URL:', appUrl)
       
-      // 1. Register TASK_VIEW_TAB
+      // 1. Register TASK_VIEW_TAB for Hours Management
       const taskPlacement = {
         PLACEMENT: 'TASK_VIEW_TAB',
-        HANDLER: `${appUrl}/handler/task-time-tracking`,
+        HANDLER: `${appUrl}/handler/task-hours-management`,
         TITLE: 'Учет часов',
-        DESCRIPTION: 'Учет времени по задаче'
+        DESCRIPTION: 'Управление рабочим временем и отражение часов по задачам'
       }
 
       try {
-        // Try unbind first
-        await $b24.callMethod('placement.unbind', {
-            PLACEMENT: taskPlacement.PLACEMENT,
-            HANDLER: taskPlacement.HANDLER
-        }).catch(() => {}) // Ignore unbind error
+        // Robust strategy: List all placements and unbind TASK_VIEW_TAB
+        const existingPlacements: any = await $b24.callMethod('placement.get')
+        const placementsList = existingPlacements.getData() || []
+        
+        console.log('Found existing placements:', placementsList)
 
-        // Bind
+        for (const p of placementsList) {
+          if (p.placement === 'TASK_VIEW_TAB') {
+            console.log('Unbinding old placement:', p)
+            await $b24.callMethod('placement.unbind', {
+              PLACEMENT: p.placement,
+              HANDLER: p.handler
+            }).catch((err) => console.warn('Failed to unbind:', p, err))
+          }
+        }
+
+        // Bind new placement
         const res = await $b24.callMethod('placement.bind', taskPlacement)
-        console.log('Task placement bound:', res.getData())
+        console.log('Task hours management placement bound:', res.getData())
+        
+        // Show success message
+        if ($b24.parent) {
+             $b24.parent.postMessage({ action: 'notification', message: 'Встройка "Учет часов" успешно зарегистрирована!' }, '*')
+        }
+
       } catch (e: any) {
-        console.error('Failed to bind task placement:', e)
-        $logger.error('Failed to bind task placement', e)
+        console.error('Failed to bind task hours management placement:', e)
+        $logger.error('Failed to bind task hours management placement', e)
         // Don't throw, try next placement
       }
 
